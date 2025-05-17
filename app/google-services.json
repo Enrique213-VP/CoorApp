@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1087184336559",
+    "project_id": "coorapp-82dc0",
+    "storage_bucket": "coorapp-82dc0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1087184336559:android:602400da467862c454065a",
+        "android_client_info": {
+          "package_name": "com.svape.qr.coorapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3VV6y80Gtngzr2VNDsCFNh8g1Jcst0OQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -145,7 +145,7 @@ public class MainViewModel extends ViewModel {
     }
 
     private boolean isValidInputFormat(String input) {
-        String regex = "^[^-]+-[^-]+-[^-]+-[^-]+$";
+        String regex = "^.+(-[^-]*){3}$";
         return input.matches(regex);
     }
 
@@ -164,6 +164,18 @@ public class MainViewModel extends ViewModel {
 
     public LiveData<Resource<Boolean>> getLogoutResult() {
         return logoutResult;
+    }
+
+    public void syncAllItems() {
+        disposables.add(
+                syncWithFirebase()
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                () -> Log.d(TAG, "Sincronización manual completa"),
+                                error -> Log.e(TAG, "Error en sincronización manual", error)
+                        )
+        );
     }
 
     @Override

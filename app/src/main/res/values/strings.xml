@@ -20,6 +20,8 @@
     <string name="camera_permission_required">Permiso de cámara requerido para escanear códigos QR</string>
     <string name="observation_label">Observación:</string>
     <string name="show_on_map">Mostrar en mapa</string>
+    <string name="sync_button">Sincronizar</string>
+    <string name="sync_started">Sincronizando elementos...</string>
 
     <!-- Map Screen -->
     <string name="back_button">Regresar</string>

@@ -60,15 +60,35 @@ public class BackupRepository {
 
     public Completable syncWithFirebase(List<BackupItem> items, String deviceId, String date) {
         return Completable.create(emitter -> {
-            Map<String, Object> data = new HashMap<>();
-            data.put("items", items);
-            data.put("deviceId", deviceId);
-            data.put("date", date);
+            String deviceCollectionPath = "devices/" + deviceId + "/items";
 
-            firestore.collection("backup")
-                    .document(deviceId)
-                    .set(data)
-                    .addOnSuccessListener(aVoid -> emitter.onComplete())
+            firestore.collection(deviceCollectionPath)
+                    .get()
+                    .addOnSuccessListener(querySnapshot -> {
+                        com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+
+                        for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                            batch.delete(doc.getReference());
+                        }
+
+                        for (BackupItem item : items) {
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("etiqueta1d", item.getEtiqueta1d());
+                            data.put("latitud", item.getLatitud());
+                            data.put("longitud", item.getLongitud());
+                            data.put("observacion", item.getObservacion());
+                            data.put("deviceId", deviceId);
+                            data.put("updateDate", date);
+
+                            com.google.firebase.firestore.DocumentReference docRef =
+                                    firestore.collection(deviceCollectionPath).document(item.getEtiqueta1d());
+                            batch.set(docRef, data);
+                        }
+
+                        batch.commit()
+                                .addOnSuccessListener(aVoid -> emitter.onComplete())
+                                .addOnFailureListener(emitter::onError);
+                    })
                     .addOnFailureListener(emitter::onError);
         });
     }

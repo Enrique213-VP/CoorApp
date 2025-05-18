@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -73,6 +74,12 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     private void setupClickListeners() {
         binding.logoutButton.setOnClickListener(v -> viewModel.logout());
 
+        binding.syncButton.setOnClickListener(v -> {
+            showLoading(true);
+            viewModel.syncAllItems();
+            Snackbar.make(binding.getRoot(), R.string.sync_started, Snackbar.LENGTH_SHORT).show();
+        });
+
         binding.cameraButton.setOnClickListener(v -> {
             if (hasCameraPermission()) {
                 showCameraView();
@@ -100,11 +107,7 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     private void observeViewModel() {
         viewModel.getBackupItems().observe(this, items -> {
             adapter.setItems(items);
-
-            // Si no hay elementos, mostrar mensaje
-            if (items.isEmpty()) {
-                // Aquí podrías mostrar una vista "empty state"
-            }
+            showLoading(false);
         });
 
         viewModel.getProcessQrResult().observe(this, result -> {
@@ -217,6 +220,10 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     @Override
     public void onMapClick(BackupItem item) {
+        Log.d("MainActivity", "Click en mapa para item - Etiqueta: " + item.getEtiqueta1d() +
+                ", Latitud: " + item.getLatitud() +
+                ", Longitud: " + item.getLongitud());
+
         Intent intent = new Intent(this, MapActivity.class);
         intent.putExtra(MapActivity.EXTRA_LATITUDE, item.getLatitud());
         intent.putExtra(MapActivity.EXTRA_LONGITUDE, item.getLongitud());

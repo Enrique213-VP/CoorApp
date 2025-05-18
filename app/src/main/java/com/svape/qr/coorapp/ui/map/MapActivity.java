@@ -55,9 +55,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
     private final OnIndicatorPositionChangedListener onIndicatorPositionChangedListener = point -> {
         currentUserLocation = point;
-        if (targetLatitude != 0 && targetLongitude != 0) {
-            fitCameraToBounds();
-        }
+        fitCameraToBounds();
     };
 
     @Override
@@ -70,6 +68,8 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         targetLongitude = getIntent().getDoubleExtra(EXTRA_LONGITUDE, 0);
         etiqueta = getIntent().getStringExtra(EXTRA_ETIQUETA);
         binding.destinationLabel.setText("Destino: " + etiqueta);
+
+        Log.d(TAG, "Recibiendo coordenadas: Latitud=" + targetLatitude + ", Longitud=" + targetLongitude);
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -94,10 +94,8 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
     private void initAnnotations() {
         try {
-            // Get the annotation plugin
             AnnotationPlugin annotationPlugin = binding.mapView.getPlugin(Plugin.MAPBOX_ANNOTATION_PLUGIN_ID);
 
-            // Create the point annotation manager using AnnotationType enum
             pointAnnotationManager = (PointAnnotationManager) annotationPlugin.createAnnotationManager(
                     AnnotationType.PointAnnotation,
                     new AnnotationConfig()

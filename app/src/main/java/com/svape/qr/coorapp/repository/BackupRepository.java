@@ -1,6 +1,8 @@
 package com.svape.qr.coorapp.repository;
 
+import android.util.Log;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.svape.qr.coorapp.model.BackupItem;
 import com.svape.qr.coorapp.model.ApiResponse;
 import com.svape.qr.coorapp.repository.local.AppDatabase;
@@ -14,6 +16,7 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
 public class BackupRepository {
+    private static final String TAG = "BackupRepository";
     private final AppDatabase database;
     private final FirebaseFirestore firestore;
     private final ApiService apiService;
@@ -60,36 +63,97 @@ public class BackupRepository {
 
     public Completable syncWithFirebase(List<BackupItem> items, String deviceId, String date) {
         return Completable.create(emitter -> {
-            String deviceCollectionPath = "devices/" + deviceId + "/items";
+            if (items.isEmpty()) {
+                Log.d(TAG, "No hay elementos para sincronizar con Firebase");
+                emitter.onComplete();
+                return;
+            }
 
-            firestore.collection(deviceCollectionPath)
-                    .get()
-                    .addOnSuccessListener(querySnapshot -> {
-                        com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+            Map<String, Object> data = new HashMap<>();
+            data.put("items", items);
+            data.put("deviceId", deviceId);
+            data.put("date", date);
+            data.put("timestamp", System.currentTimeMillis());
 
-                        for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                            batch.delete(doc.getReference());
-                        }
+            Log.d(TAG, "Sincronizando " + items.size() + " elementos a Firebase");
 
-                        for (BackupItem item : items) {
-                            Map<String, Object> data = new HashMap<>();
-                            data.put("etiqueta1d", item.getEtiqueta1d());
-                            data.put("latitud", item.getLatitud());
-                            data.put("longitud", item.getLongitud());
-                            data.put("observacion", item.getObservacion());
-                            data.put("deviceId", deviceId);
-                            data.put("updateDate", date);
-
-                            com.google.firebase.firestore.DocumentReference docRef =
-                                    firestore.collection(deviceCollectionPath).document(item.getEtiqueta1d());
-                            batch.set(docRef, data);
-                        }
-
-                        batch.commit()
-                                .addOnSuccessListener(aVoid -> emitter.onComplete())
-                                .addOnFailureListener(emitter::onError);
+            firestore.collection("backup")
+                    .document(deviceId)
+                    .set(data)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Datos sincronizados exitosamente a Firebase");
+                        emitter.onComplete();
                     })
-                    .addOnFailureListener(emitter::onError);
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error sincronizando con Firebase", e);
+                        emitter.onError(e);
+                    });
+        });
+    }
+
+    public Single<List<BackupItem>> getBackupFromFirebase(String deviceId) {
+        return Single.create(emitter -> {
+            Log.d(TAG, "Intentando recuperar datos desde Firebase para dispositivo: " + deviceId);
+
+            firestore.collection("backup")
+                    .document(deviceId)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists() && documentSnapshot.contains("items")) {
+                            try {
+                                List<Map<String, Object>> itemsMap = (List<Map<String, Object>>) documentSnapshot.get("items");
+                                List<BackupItem> items = new ArrayList<>();
+
+                                if (itemsMap != null) {
+                                    Log.d(TAG, "Recuperados " + itemsMap.size() + " elementos de Firebase");
+
+                                    for (Map<String, Object> map : itemsMap) {
+                                        String etiqueta = (String) map.get("etiqueta1d");
+                                        double latitud = 0;
+                                        double longitud = 0;
+                                        String observacion = (String) map.get("observacion");
+
+                                        if (map.get("latitud") instanceof Double) {
+                                            latitud = (Double) map.get("latitud");
+                                        } else if (map.get("latitud") instanceof Long) {
+                                            latitud = ((Long) map.get("latitud")).doubleValue();
+                                        } else if (map.get("latitud") instanceof Number) {
+                                            latitud = ((Number) map.get("latitud")).doubleValue();
+                                        }
+
+                                        if (map.get("longitud") instanceof Double) {
+                                            longitud = (Double) map.get("longitud");
+                                        } else if (map.get("longitud") instanceof Long) {
+                                            longitud = ((Long) map.get("longitud")).doubleValue();
+                                        } else if (map.get("longitud") instanceof Number) {
+                                            longitud = ((Number) map.get("longitud")).doubleValue();
+                                        }
+
+                                        if (etiqueta != null) {
+                                            BackupItem item = new BackupItem(etiqueta, latitud, longitud, observacion);
+                                            items.add(item);
+                                            Log.d(TAG, "Item recuperado: " + etiqueta);
+                                        }
+                                    }
+
+                                    emitter.onSuccess(items);
+                                } else {
+                                    Log.d(TAG, "No se encontraron items en Firebase");
+                                    emitter.onSuccess(new ArrayList<>());
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parseando datos de Firebase", e);
+                                emitter.onError(e);
+                            }
+                        } else {
+                            Log.d(TAG, "No se encontró documento en Firebase o no contiene items");
+                            emitter.onSuccess(new ArrayList<>());
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error recuperando datos de Firebase", e);
+                        emitter.onError(e);
+                    });
         });
     }
 

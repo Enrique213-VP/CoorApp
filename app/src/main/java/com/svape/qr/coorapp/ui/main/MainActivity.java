@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,10 +28,12 @@ import com.svape.qr.coorapp.di.ViewModelFactory;
 import com.svape.qr.coorapp.model.BackupItem;
 import com.svape.qr.coorapp.ui.login.LoginActivity;
 import com.svape.qr.coorapp.ui.map.MapActivity;
+import com.svape.qr.coorapp.util.Resource;
 
 import javax.inject.Inject;
 
 public class MainActivity extends AppCompatActivity implements BackupAdapter.OnMapClickListener {
+    private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_CAMERA = 100;
 
     @Inject
@@ -39,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     private MainViewModel viewModel;
     private BackupAdapter adapter;
     private CodeScanner codeScanner;
+    private RotateAnimation rotateAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +58,16 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
         setupRecyclerView();
         setupCamera();
         setupClickListeners();
+        setupRotateAnimation();
         observeViewModel();
+    }
+
+    private void setupRotateAnimation() {
+        rotateAnimation = new RotateAnimation(0f, 360f,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setDuration(1000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
     }
 
     private void setupRecyclerView() {
@@ -75,9 +89,12 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
         binding.logoutButton.setOnClickListener(v -> viewModel.logout());
 
         binding.syncButton.setOnClickListener(v -> {
+            Log.d(TAG, "Botón de sincronización presionado");
+            setSyncButtonEnabled(false);
             showLoading(true);
-            viewModel.syncAllItems();
+            animateSyncIcon(true);
             Snackbar.make(binding.getRoot(), R.string.sync_started, Snackbar.LENGTH_SHORT).show();
+            viewModel.syncAllItems();
         });
 
         binding.cameraButton.setOnClickListener(v -> {
@@ -106,8 +123,12 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     private void observeViewModel() {
         viewModel.getBackupItems().observe(this, items -> {
+            Log.d(TAG, "BackupItems actualizados, cantidad: " + items.size());
             adapter.setItems(items);
-            showLoading(false);
+
+            if (items.isEmpty()) {
+                Log.d(TAG, "No hay elementos para mostrar");
+            }
         });
 
         viewModel.getProcessQrResult().observe(this, result -> {
@@ -147,6 +168,47 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
                     break;
             }
         });
+
+        viewModel.getSyncResult().observe(this, result -> {
+            Log.d(TAG, "Estado de sincronización actualizado: " + result.status);
+
+            switch (result.status) {
+                case LOADING:
+                    showLoading(true);
+                    setSyncButtonEnabled(false);
+                    animateSyncIcon(true);
+                    break;
+                case SUCCESS:
+                    showLoading(false);
+                    setSyncButtonEnabled(true);
+                    animateSyncIcon(false);
+                    Snackbar.make(binding.getRoot(), R.string.sync_completed, Snackbar.LENGTH_SHORT).show();
+                    break;
+                case ERROR:
+                    showLoading(false);
+                    setSyncButtonEnabled(true);
+                    animateSyncIcon(false);
+                    if (result.message != null) {
+                        Snackbar.make(binding.getRoot(), result.message, Snackbar.LENGTH_LONG).show();
+                    } else {
+                        Snackbar.make(binding.getRoot(), R.string.sync_error, Snackbar.LENGTH_LONG).show();
+                    }
+                    break;
+            }
+        });
+    }
+
+    private void setSyncButtonEnabled(boolean enabled) {
+        binding.syncButton.setEnabled(enabled);
+        binding.syncButton.setAlpha(enabled ? 1.0f : 0.5f);
+    }
+
+    private void animateSyncIcon(boolean animate) {
+        if (animate) {
+            binding.syncButton.startAnimation(rotateAnimation);
+        } else {
+            binding.syncButton.clearAnimation();
+        }
     }
 
     private void showCameraView() {
@@ -205,6 +267,8 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     @Override
     protected void onResume() {
         super.onResume();
+        viewModel.loadBackupItems();
+
         if (binding.cameraContainer.getVisibility() == View.VISIBLE && hasCameraPermission()) {
             codeScanner.startPreview();
         }
@@ -220,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     @Override
     public void onMapClick(BackupItem item) {
-        Log.d("MainActivity", "Click en mapa para item - Etiqueta: " + item.getEtiqueta1d() +
+        Log.d(TAG, "Click en mapa para item - Etiqueta: " + item.getEtiqueta1d() +
                 ", Latitud: " + item.getLatitud() +
                 ", Longitud: " + item.getLongitud());
 

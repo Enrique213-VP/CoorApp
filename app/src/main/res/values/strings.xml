@@ -22,6 +22,8 @@
     <string name="show_on_map">Mostrar en mapa</string>
     <string name="sync_button">Sincronizar</string>
     <string name="sync_started">Sincronizando elementos...</string>
+    <string name="sync_completed">Sincronización completada</string>
+    <string name="sync_error">Error en la sincronización</string>
 
     <!-- Map Screen -->
     <string name="back_button">Regresar</string>

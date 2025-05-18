@@ -14,8 +14,6 @@ firebaseBom = "33.13.0"
 room = "2.7.1"
 volley = "1.2.1"
 codeScanner = "2.3.2"
-googleMaps = "19.2.0"
-googleLocation = "21.3.0"
 lifecycle = "2.9.0"
 mockito = "5.2.0"
 navigationFragment = "2.9.0"
@@ -54,10 +52,6 @@ volley = { group = "com.android.volley", name = "volley", version.ref = "volley"
 
 # QR Scanner
 code-scanner = { group = "com.github.yuriy-budiyev", name = "code-scanner", version.ref = "codeScanner" }
-
-# Maps y Location
-google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
-google-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googleLocation" }
 
 # ViewModel y LiveData
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }

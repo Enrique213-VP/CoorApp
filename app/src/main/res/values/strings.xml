@@ -1,3 +1,44 @@
 <resources>
     <string name="app_name">CoorApp</string>
+
+    <!-- Login -->
+    <string name="login_title">Bienvenido</string>
+    <string name="username_hint">Usuario</string>
+    <string name="password_hint">Contraseña</string>
+    <string name="login_button">Iniciar Sesión</string>
+    <string name="error_username_required">Usuario es requerido</string>
+    <string name="error_password_required">Contraseña es requerida</string>
+    <string name="error_login_generic">Error al iniciar sesión</string>
+    <string name="app_logo">Logo de la aplicación</string>
+
+    <!-- Main Screen -->
+    <string name="read_info_title">Leer Información</string>
+    <string name="logout_button">Cerrar Sesión</string>
+    <string name="manual_input_hint">Ingrese datos manualmente</string>
+    <string name="open_camera">Abrir cámara</string>
+    <string name="close_camera">Cerrar cámara</string>
+    <string name="camera_permission_required">Permiso de cámara requerido para escanear códigos QR</string>
+    <string name="observation_label">Observación:</string>
+    <string name="show_on_map">Mostrar en mapa</string>
+
+    <!-- Map Screen -->
+    <string name="back_button">Regresar</string>
+    <string name="location_not_available">Ubicación no disponible</string>
+    <string name="location_permission_required">Permiso de ubicación requerido para mostrar dirección</string>
+
+
+    <!-- Register Screen -->
+    <string name="register_title">Crear Cuenta</string>
+    <string name="confirm_password_hint">Confirmar Contraseña</string>
+    <string name="register_button">Registrarse</string>
+    <string name="already_have_account">¿Ya tienes una cuenta? Inicia sesión</string>
+    <string name="error_confirm_password">Las contraseñas no coinciden</string>
+    <string name="error_username_exists">El nombre de usuario ya existe</string>
+    <string name="registration_success">Usuario registrado exitosamente</string>
+    <string name="error_registration">Error al registrar usuario</string>
+    <string name="dont_have_account">¿No tienes una cuenta? Regístrate</string>
+    <string name="button_back">Regresar</string>
+
+    <string name="mapbox_access_token">tk</string>
+
 </resources>

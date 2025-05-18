@@ -9,9 +9,8 @@ import com.svape.qr.coorapp.ui.login.LoginActivity;
 import com.svape.qr.coorapp.ui.main.MainActivity;
 import com.svape.qr.coorapp.ui.map.MapActivity;
 import com.svape.qr.coorapp.ui.register.RegisterActivity;
-
+import com.svape.qr.coorapp.ui.splash.SplashActivity;
 import javax.inject.Singleton;
-
 import dagger.BindsInstance;
 import dagger.Component;
 
@@ -27,6 +26,7 @@ public interface AppComponent {
     void inject(MainActivity mainActivity);
     void inject(RegisterActivity registerActivity);
     void inject(MapActivity mapActivity);
+    void inject(SplashActivity splashActivity);
 
     @Component.Builder
     interface Builder {

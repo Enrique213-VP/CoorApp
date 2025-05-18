@@ -39,4 +39,15 @@
         <item name="android:layout_margin">8dp</item>
         <item name="actionTextColorAlpha">1.0</item>
     </style>
+
+
+    <style name="Theme.CoorApp.Splash" parent="Theme.CoorApp.Light">
+        <item name="android:windowBackground">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
 </resources>

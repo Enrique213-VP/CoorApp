@@ -24,6 +24,7 @@
     <string name="sync_started">Sincronizando elementos...</string>
     <string name="sync_completed">Sincronización completada</string>
     <string name="sync_error">Error en la sincronización</string>
+    <string name="no_internet_connection">No hay conexión a internet</string>
 
     <!-- Map Screen -->
     <string name="back_button">Regresar</string>

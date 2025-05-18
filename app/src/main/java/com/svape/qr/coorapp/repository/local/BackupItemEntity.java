@@ -12,12 +12,14 @@ public class BackupItemEntity {
     private double latitud;
     private double longitud;
     private String observacion;
+    private String username;
 
-    public BackupItemEntity(String etiqueta1d, double latitud, double longitud, String observacion) {
+    public BackupItemEntity(String etiqueta1d, double latitud, double longitud, String observacion, String username) {
         this.etiqueta1d = etiqueta1d;
         this.latitud = latitud;
         this.longitud = longitud;
         this.observacion = observacion;
+        this.username = username;
     }
 
     public int getId() {
@@ -58,5 +60,13 @@ public class BackupItemEntity {
 
     public void setObservacion(String observacion) {
         this.observacion = observacion;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

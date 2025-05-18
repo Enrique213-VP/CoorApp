@@ -15,9 +15,15 @@ public interface BackupDao {
     @Query("SELECT * FROM backup_local")
     Single<List<BackupItemEntity>> getAll();
 
+    @Query("SELECT * FROM backup_local WHERE username = :username")
+    Single<List<BackupItemEntity>> getAllForUser(String username);
+
     @Query("SELECT COUNT(*) FROM backup_local")
     Single<Integer> getCount();
 
     @Query("DELETE FROM backup_local")
     Completable deleteAll();
+
+    @Query("DELETE FROM backup_local WHERE username != :username")
+    Completable deleteAllExceptUser(String username);
 }

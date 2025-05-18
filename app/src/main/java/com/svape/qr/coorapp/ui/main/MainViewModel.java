@@ -1,5 +1,6 @@
 package com.svape.qr.coorapp.ui.main;
 
+import android.content.Context;
 import android.util.Base64;
 import android.util.Log;
 import androidx.lifecycle.LiveData;
@@ -9,7 +10,9 @@ import com.svape.qr.coorapp.model.BackupItem;
 import com.svape.qr.coorapp.repository.BackupRepository;
 import com.svape.qr.coorapp.util.DataParser;
 import com.svape.qr.coorapp.util.DeviceInfoHelper;
+import com.svape.qr.coorapp.util.NetworkUtils;
 import com.svape.qr.coorapp.util.Resource;
+import com.svape.qr.coorapp.util.SessionManager;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,7 +33,8 @@ public class MainViewModel extends ViewModel {
 
     private final BackupRepository backupRepository;
     private final DeviceInfoHelper deviceInfoHelper;
-
+    private final SessionManager sessionManager;
+    private final Context context;
     private final MutableLiveData<List<BackupItem>> backupItems = new MutableLiveData<>();
     private final MutableLiveData<Resource<String>> processQrResult = new MutableLiveData<>();
     private final MutableLiveData<Resource<Boolean>> logoutResult = new MutableLiveData<>();
@@ -41,35 +45,123 @@ public class MainViewModel extends ViewModel {
     private boolean isSyncing = false;
 
     @Inject
-    public MainViewModel(BackupRepository backupRepository, DeviceInfoHelper deviceInfoHelper) {
+    public MainViewModel(BackupRepository backupRepository, DeviceInfoHelper deviceInfoHelper,
+                         SessionManager sessionManager, Context context) {
         this.backupRepository = backupRepository;
         this.deviceInfoHelper = deviceInfoHelper;
+        this.sessionManager = sessionManager;
+        this.context = context;
 
-        loadBackupItems();
+        checkUserChange();
     }
 
-    public void loadBackupItems() {
+    private void checkUserChange() {
+        if (sessionManager.isUserChanged()) {
+            String currentUser = sessionManager.getUsername();
+            String lastUser = sessionManager.getLastUsername();
+            Log.d(TAG, "Detectado cambio de usuario: " + lastUser + " -> " + currentUser);
+
+            clearPreviousUserData();
+        } else {
+            loadUserData();
+        }
+    }
+
+    private void loadUserData() {
+        String username = sessionManager.getUsername();
+        if (username.isEmpty()) {
+            Log.e(TAG, "Error: No hay usuario autenticado");
+            return;
+        }
+
+        Log.d(TAG, "Cargando datos para usuario: " + username);
+        loadBackupItemsForUser(username);
+    }
+
+    public void clearPreviousUserData() {
+        String currentUser = sessionManager.getUsername();
+
+        if (currentUser.isEmpty()) {
+            Log.e(TAG, "Error: No hay usuario autenticado para limpiar datos previos");
+            return;
+        }
+
         disposables.add(
-                backupRepository.getAllBackupItems()
+                backupRepository.deleteAllExceptUser(currentUser)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                items -> backupItems.setValue(items),
-                                error -> Log.e(TAG, "Error loading backup items", error)
+                                () -> {
+                                    Log.d(TAG, "Datos de usuarios anteriores eliminados correctamente");
+                                    sessionManager.setLastUsername(currentUser);
+                                    loadUserData();
+                                },
+                                error -> {
+                                    Log.e(TAG, "Error al eliminar datos de usuarios anteriores", error);
+                                    loadUserData();
+                                }
                         )
         );
     }
 
-    public void loadFromFirebase() {
-        String deviceId = deviceInfoHelper.getDeviceId();
-
+    public void loadBackupItemsForUser(String username) {
         disposables.add(
-                backupRepository.getBackupFromFirebase(deviceId)
+                backupRepository.getAllBackupItemsForUser(username)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
                                 items -> {
-                                    Log.d(TAG, "Datos cargados desde Firebase: " + items.size() + " elementos");
+                                    Log.d(TAG, "Cargados " + items.size() + " elementos para el usuario: " + username);
+                                    backupItems.setValue(items);
+                                },
+                                error -> Log.e(TAG, "Error loading backup items for user: " + username, error)
+                        )
+        );
+    }
+
+
+    public void loadBackupItems() {
+        String username = sessionManager.getUsername();
+        if (username.isEmpty()) {
+            disposables.add(
+                    backupRepository.getAllBackupItems()
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(
+                                    items -> backupItems.setValue(items),
+                                    error -> Log.e(TAG, "Error loading backup items", error)
+                            )
+            );
+        } else {
+            loadBackupItemsForUser(username);
+        }
+    }
+
+    public void loadFromFirebase() {
+        Context context = deviceInfoHelper.getContext();
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            Log.d(TAG, "No hay conexión a internet. Cancelando sincronización.");
+            syncResult.setValue(Resource.error("No hay conexión a internet", false));
+            isSyncing = false;
+            return;
+        }
+
+        String username = sessionManager.getUsername();
+
+        if (username.isEmpty()) {
+            Log.e(TAG, "Error: Intentando cargar datos sin un usuario autenticado");
+            syncResult.setValue(Resource.error("No hay usuario autenticado", false));
+            isSyncing = false;
+            return;
+        }
+
+        disposables.add(
+                backupRepository.getBackupFromFirebase(username)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                items -> {
+                                    Log.d(TAG, "Datos cargados desde Firebase: " + items.size() + " elementos para usuario: " + username);
                                     checkAndSaveItemsLocally(items);
                                 },
                                 error -> {
@@ -127,12 +219,13 @@ public class MainViewModel extends ViewModel {
             return;
         }
 
-        Log.d(TAG, "Guardando " + itemsToAdd.size() + " elementos nuevos localmente");
+        String username = sessionManager.getUsername();
+        Log.d(TAG, "Guardando " + itemsToAdd.size() + " elementos nuevos localmente para usuario: " + username);
 
         Completable completable = Completable.complete();
 
         for (BackupItem item : itemsToAdd) {
-            completable = completable.andThen(backupRepository.saveBackupItem(item));
+            completable = completable.andThen(backupRepository.saveBackupItem(item, username));
         }
 
         disposables.add(
@@ -155,6 +248,13 @@ public class MainViewModel extends ViewModel {
     }
 
     private void syncUploadToFirebase() {
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            Log.d(TAG, "No hay conexión a internet para subida. Cancelando sincronización.");
+            syncResult.setValue(Resource.error("No hay conexión a internet", false));
+            isSyncing = false;
+            return;
+        }
+
         disposables.add(
                 syncWithFirebase()
                         .timeout(20, TimeUnit.SECONDS)
@@ -177,13 +277,14 @@ public class MainViewModel extends ViewModel {
 
     public void processQrData(String qrData) {
         processQrResult.setValue(Resource.loading(null));
+        String username = sessionManager.getUsername();
 
         disposables.add(
                 backupRepository.validateQrData(qrData)
                         .flatMap(response -> {
                             if (response.isCorrect()) {
                                 BackupItem item = DataParser.parseData(response.getData());
-                                return backupRepository.saveBackupItem(item)
+                                return backupRepository.saveBackupItem(item, username)
                                         .andThen(Single.just(item));
                             } else {
                                 return Single.error(new IllegalArgumentException("Estructura QR incorrecta"));
@@ -193,7 +294,6 @@ public class MainViewModel extends ViewModel {
                             return backupRepository.getBackupCount()
                                     .map(count -> {
                                         boolean shouldSync = true;
-
                                         Log.d(TAG, "Contador de elementos: " + count + ", Sincronizar: " + shouldSync);
                                         return new Object[]{item, shouldSync};
                                     });
@@ -203,6 +303,11 @@ public class MainViewModel extends ViewModel {
                             boolean shouldSync = (boolean) result[1];
 
                             if (shouldSync) {
+                                if (!NetworkUtils.isNetworkAvailable(context)) {
+                                    Log.d(TAG, "No hay conexión a internet. Se procesará el QR sin sincronizar.");
+                                    return Single.just(item.getEtiqueta1d() + " (sin sincronizar)");
+                                }
+
                                 Log.d(TAG, "Iniciando sincronización con Firebase para elemento: " + item.getEtiqueta1d());
                                 return syncWithFirebase()
                                         .andThen(Single.just(item.getEtiqueta1d()));
@@ -234,11 +339,17 @@ public class MainViewModel extends ViewModel {
                         return Completable.complete();
                     }
 
-                    String deviceId = deviceInfoHelper.getDeviceId();
+                    String username = sessionManager.getUsername();
+
+                    if (username.isEmpty()) {
+                        Log.e(TAG, "Error: Intentando sincronizar sin un usuario autenticado");
+                        return Completable.error(new IllegalStateException("No hay usuario autenticado"));
+                    }
+
                     String currentDate = getCurrentDateAsString();
-                    return backupRepository.syncWithFirebase(items, deviceId, currentDate)
+                    return backupRepository.syncWithFirebase(items, username, currentDate)
                             .timeout(15, TimeUnit.SECONDS)
-                            .doOnComplete(() -> Log.d(TAG, "Sincronización completada exitosamente"))
+                            .doOnComplete(() -> Log.d(TAG, "Sincronización completada exitosamente para usuario: " + username))
                             .doOnError(e -> Log.e(TAG, "Error en sincronización", e));
                 });
     }
@@ -246,18 +357,9 @@ public class MainViewModel extends ViewModel {
     public void logout() {
         logoutResult.setValue(Resource.loading(null));
 
-        String deviceId = deviceInfoHelper.getDeviceId();
+        sessionManager.clearLoginStatus();
 
-        disposables.add(
-                backupRepository.deleteBackup(deviceId)
-                        .andThen(backupRepository.deleteAllLocalBackup())
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                () -> logoutResult.setValue(Resource.success(true)),
-                                error -> logoutResult.setValue(Resource.error("Error al cerrar sesión: " + error.getMessage(), false))
-                        )
-        );
+        logoutResult.setValue(Resource.success(true));
     }
 
     public void processManualInput(String input) {
@@ -304,6 +406,13 @@ public class MainViewModel extends ViewModel {
     public void syncAllItems() {
         if (isSyncing) {
             Log.d(TAG, "Ya hay una sincronización en progreso");
+            return;
+        }
+
+        Context context = deviceInfoHelper.getContext();
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            Log.d(TAG, "No hay conexión a internet. Cancelando sincronización.");
+            syncResult.setValue(Resource.error("No hay conexión a internet", false));
             return;
         }
 

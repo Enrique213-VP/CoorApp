@@ -13,7 +13,6 @@ import com.svape.qr.coorapp.di.ViewModelFactory;
 import com.svape.qr.coorapp.ui.main.MainActivity;
 import com.svape.qr.coorapp.ui.register.RegisterActivity;
 import com.svape.qr.coorapp.util.Resource;
-
 import javax.inject.Inject;
 
 public class LoginActivity extends AppCompatActivity {

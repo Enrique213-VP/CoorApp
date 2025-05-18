@@ -28,7 +28,8 @@ import com.svape.qr.coorapp.di.ViewModelFactory;
 import com.svape.qr.coorapp.model.BackupItem;
 import com.svape.qr.coorapp.ui.login.LoginActivity;
 import com.svape.qr.coorapp.ui.map.MapActivity;
-import com.svape.qr.coorapp.util.Resource;
+import com.svape.qr.coorapp.util.NetworkUtils;
+import com.svape.qr.coorapp.util.SessionManager;
 
 import javax.inject.Inject;
 
@@ -38,6 +39,9 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     @Inject
     ViewModelFactory viewModelFactory;
+
+    @Inject
+    SessionManager sessionManager;
 
     private ActivityMainBinding binding;
     private MainViewModel viewModel;
@@ -52,22 +56,30 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        setSupportActionBar(binding.toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
 
         viewModel = new ViewModelProvider(this, viewModelFactory).get(MainViewModel.class);
+
+        if (!sessionManager.isLoggedIn()) {
+            navigateToLogin();
+            return;
+        }
+
+        if (sessionManager.isUserChanged()) {
+            String currentUser = sessionManager.getUsername();
+            Snackbar.make(binding.getRoot(),
+                    "Se han cargado los datos para " + currentUser,
+                    Snackbar.LENGTH_LONG).show();
+        }
 
         setupRecyclerView();
         setupCamera();
         setupClickListeners();
         setupRotateAnimation();
         observeViewModel();
-    }
-
-    private void setupRotateAnimation() {
-        rotateAnimation = new RotateAnimation(0f, 360f,
-                Animation.RELATIVE_TO_SELF, 0.5f,
-                Animation.RELATIVE_TO_SELF, 0.5f);
-        rotateAnimation.setDuration(1000);
-        rotateAnimation.setRepeatCount(Animation.INFINITE);
     }
 
     private void setupRecyclerView() {
@@ -85,11 +97,25 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
         }));
     }
 
+    private void setupRotateAnimation() {
+        rotateAnimation = new RotateAnimation(0f, 360f,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF, 0.5f);
+        rotateAnimation.setDuration(1000);
+        rotateAnimation.setRepeatCount(Animation.INFINITE);
+    }
+
     private void setupClickListeners() {
         binding.logoutButton.setOnClickListener(v -> viewModel.logout());
 
         binding.syncButton.setOnClickListener(v -> {
             Log.d(TAG, "Botón de sincronización presionado");
+
+            if (!NetworkUtils.isNetworkAvailable(this)) {
+                Snackbar.make(binding.getRoot(), R.string.no_internet_connection, Snackbar.LENGTH_LONG).show();
+                return;
+            }
+
             setSyncButtonEnabled(false);
             showLoading(true);
             animateSyncIcon(true);
@@ -213,22 +239,28 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     private void showCameraView() {
         binding.cameraContainer.setVisibility(View.VISIBLE);
+        ConstraintLayout mainConstraint = binding.mainConstraintLayout;
         ConstraintSet constraintSet = new ConstraintSet();
-        constraintSet.clone((ConstraintLayout) binding.getRoot());
+        constraintSet.clone(mainConstraint);
         constraintSet.connect(R.id.inputContainer, ConstraintSet.TOP,
                 R.id.cameraContainer, ConstraintSet.BOTTOM, 0);
-        constraintSet.applyTo((ConstraintLayout) binding.getRoot());
+
+        constraintSet.applyTo(mainConstraint);
 
         codeScanner.startPreview();
     }
 
     private void hideCameraView() {
         binding.cameraContainer.setVisibility(View.GONE);
+
+        ConstraintLayout mainConstraint = binding.mainConstraintLayout;
+
         ConstraintSet constraintSet = new ConstraintSet();
-        constraintSet.clone((ConstraintLayout) binding.getRoot());
+        constraintSet.clone(mainConstraint);
         constraintSet.connect(R.id.inputContainer, ConstraintSet.TOP,
-                R.id.toolbar, ConstraintSet.BOTTOM, 0);
-        constraintSet.applyTo((ConstraintLayout) binding.getRoot());
+                ConstraintSet.PARENT_ID, ConstraintSet.TOP, 0);
+
+        constraintSet.applyTo(mainConstraint);
 
         if (codeScanner != null) {
             codeScanner.stopPreview();
@@ -267,7 +299,18 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     @Override
     protected void onResume() {
         super.onResume();
-        viewModel.loadBackupItems();
+
+        if (!sessionManager.isLoggedIn()) {
+            navigateToLogin();
+            return;
+        }
+
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            viewModel.syncAllItems();
+        } else {
+            Log.d(TAG, "No hay conexión a internet. No se intentará sincronizar en onResume.");
+            viewModel.loadBackupItems();
+        }
 
         if (binding.cameraContainer.getVisibility() == View.VISIBLE && hasCameraPermission()) {
             codeScanner.startPreview();

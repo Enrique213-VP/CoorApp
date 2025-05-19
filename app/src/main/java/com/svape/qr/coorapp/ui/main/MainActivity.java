@@ -19,6 +19,9 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.budiyev.android.codescanner.CodeScanner;
@@ -66,6 +69,11 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
         viewModel = new ViewModelProvider(this, viewModelFactory).get(MainViewModel.class);
 
+
+        if (sessionManager.isLoggedIn()) {
+            viewModel.verifyLocalData();
+        }
+
         if (!sessionManager.isLoggedIn()) {
             navigateToLogin();
             return;
@@ -83,6 +91,14 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
         setupClickListeners();
         setupRotateAnimation();
         observeViewModel();
+
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView, (view, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            view.setPadding(view.getPaddingLeft(), view.getPaddingTop(),
+                    view.getPaddingRight(), insets.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     private void setupRecyclerView() {
@@ -139,15 +155,32 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
         binding.inputEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE ||
                     (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
-                String input = binding.inputEditText.getText().toString().trim();
-                if (!input.isEmpty()) {
-                    viewModel.processManualInput(input);
-                    binding.inputEditText.setText("");
-                }
+                processManualInput();
                 return true;
             }
             return false;
         });
+
+        binding.sendButton.setOnClickListener(v -> processManualInput());
+    }
+
+    private void processManualInput() {
+        String input = binding.inputEditText.getText().toString().trim();
+        if (!input.isEmpty()) {
+            try {
+                viewModel.processManualInput(input);
+                binding.inputEditText.setText("");
+            } catch (Exception e) {
+                Snackbar.make(binding.getRoot(),
+                        "Error al procesar entrada: " + e.getMessage(),
+                        Snackbar.LENGTH_LONG).show();
+                Log.e(TAG, "Error al procesar entrada manual", e);
+            }
+        } else {
+            Snackbar.make(binding.getRoot(),
+                    "Por favor ingrese datos en formato: etiqueta-latitud-longitud-observación",
+                    Snackbar.LENGTH_LONG).show();
+        }
     }
 
     private void observeViewModel() {

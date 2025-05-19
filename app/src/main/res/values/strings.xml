@@ -18,7 +18,6 @@
     <!-- Main Screen -->
     <string name="read_info_title">Leer Información</string>
     <string name="logout_button">Cerrar Sesión</string>
-    <string name="manual_input_hint">Ingrese datos manualmente</string>
     <string name="open_camera">Abrir cámara</string>
     <string name="close_camera">Cerrar cámara</string>
     <string name="camera_permission_required">Permiso de cámara requerido para escanear códigos QR</string>
@@ -31,6 +30,8 @@
     <string name="no_internet_connection">No hay conexión a internet</string>
     <string name="info_icon">Ícono de información</string>
     <string name="logout_confirmation_title">Información de Cierre de Sesión</string>
+    <string name="manual_input_hint">Formato: etiqueta-latitud-longitud-observación</string>
+    <string name="send">Enviar</string>
 
     <!-- Map Screen -->
     <string name="back_button">Regresar</string>
@@ -60,6 +61,7 @@
     <string name="thanks_message">Gracias por la oportunidad</string>
     <string name="connect_linkedin">Sergio V.</string>
 
+    <!-- Token -->
     <string name="mapbox_access_token">tk</string>
 
 </resources>

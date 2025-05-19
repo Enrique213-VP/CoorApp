@@ -1,6 +1,7 @@
 package com.svape.qr.coorapp.ui.map;
 
 import android.Manifest;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -8,17 +9,19 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import com.google.android.material.snackbar.Snackbar;
 import com.mapbox.geojson.Point;
 import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.EdgeInsets;
-import com.mapbox.maps.ImageHolder;
 import com.mapbox.maps.Style;
 import com.mapbox.maps.plugin.LocationPuck2D;
 import com.mapbox.maps.plugin.Plugin;
@@ -27,8 +30,11 @@ import com.mapbox.maps.plugin.annotation.AnnotationPlugin;
 import com.mapbox.maps.plugin.annotation.AnnotationType;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager;
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions;
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationManager;
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions;
 import com.mapbox.maps.plugin.locationcomponent.LocationComponentPlugin;
 import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListener;
+import com.svape.qr.coorapp.R;
 import com.svape.qr.coorapp.databinding.ActivityMapBinding;
 
 import java.util.ArrayList;
@@ -47,22 +53,45 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     private LocationManager locationManager;
     private PointAnnotationManager pointAnnotationManager;
     private LocationComponentPlugin locationComponentPlugin;
+    private PolylineAnnotationManager polylineAnnotationManager;
 
     private double targetLatitude;
     private double targetLongitude;
     private String etiqueta;
     private Point currentUserLocation;
+    private boolean routeShown = false;
+    private MediaPlayer mediaPlayer;
+    private int clickCount = 0;
+    private static final int MAX_SOUND_CLICKS = 3;
+
+    private static final String[] MAP_STYLES = {
+            Style.MAPBOX_STREETS,
+            Style.SATELLITE_STREETS,
+            Style.OUTDOORS,
+            Style.LIGHT,
+            Style.DARK
+    };
+    private int currentStyleIndex = 0;
 
     private final OnIndicatorPositionChangedListener onIndicatorPositionChangedListener = point -> {
         currentUserLocation = point;
-        fitCameraToBounds();
+        if (routeShown) {
+            drawRouteLine();
+        }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        clickCount = 0;
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         binding = ActivityMapBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        hideSystemUI();
 
         targetLatitude = getIntent().getDoubleExtra(EXTRA_LATITUDE, 0);
         targetLongitude = getIntent().getDoubleExtra(EXTRA_LONGITUDE, 0);
@@ -73,9 +102,95 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        binding.backButton.setOnClickListener(v -> finish());
+        setupFloatingActionButtons();
 
         initializeMap();
+    }
+
+    private void hideSystemUI() {
+        View decorView = getWindow().getDecorView();
+
+        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN;
+
+        flags |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+
+        decorView.setSystemUiVisibility(flags);
+    }
+
+
+    private void setupFloatingActionButtons() {
+        binding.fabBack.setOnClickListener(v -> finish());
+
+        binding.fabRoute.setOnClickListener(v -> {
+            if (clickCount < MAX_SOUND_CLICKS) {
+                playRouteSound();
+                clickCount++;
+            }
+
+            if (currentUserLocation != null) {
+                routeShown = true;
+                if (polylineAnnotationManager != null) {
+                    polylineAnnotationManager.deleteAll();
+                }
+                drawRouteLine();
+                Snackbar.make(binding.getRoot(), "Ruta a destino mostrada", Snackbar.LENGTH_SHORT).show();
+            } else {
+                Snackbar.make(binding.getRoot(), "Esperando ubicación actual...", Snackbar.LENGTH_SHORT).show();
+            }
+        });
+
+        binding.fabMapStyle.setOnClickListener(v -> {
+            changeMapStyle();
+        });
+    }
+
+
+
+    private void changeMapStyle() {
+        currentStyleIndex = (currentStyleIndex + 1) % MAP_STYLES.length;
+        String newStyle = MAP_STYLES[currentStyleIndex];
+
+        binding.mapView.getMapboxMap().loadStyleUri(newStyle, style -> {
+            if (hasLocationPermission()) {
+                setupLocationComponent();
+            }
+
+            if (routeShown && currentUserLocation != null) {
+                drawRouteLine();
+            }
+
+            if (targetLatitude != 0 && targetLongitude != 0) {
+                addAnnotationAtPoint(targetLatitude, targetLongitude, etiqueta);
+            }
+
+            if (currentUserLocation != null) {
+                addUserMarker();
+            }
+        });
+
+        String styleName = "Estilo: ";
+        switch (newStyle) {
+            case Style.MAPBOX_STREETS:
+                styleName += "Calles";
+                break;
+            case Style.SATELLITE_STREETS:
+                styleName += "Satélite";
+                break;
+            case Style.OUTDOORS:
+                styleName += "Exterior";
+                break;
+            case Style.LIGHT:
+                styleName += "Claro";
+                break;
+            case Style.DARK:
+                styleName += "Oscuro";
+                break;
+        }
+        Snackbar.make(binding.getRoot(), styleName, Snackbar.LENGTH_SHORT).show();
     }
 
     private void initializeMap() {
@@ -100,9 +215,30 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                     AnnotationType.PointAnnotation,
                     new AnnotationConfig()
             );
+
+            polylineAnnotationManager = (PolylineAnnotationManager) annotationPlugin.createAnnotationManager(
+                    AnnotationType.PolylineAnnotation,
+                    new AnnotationConfig()
+            );
+
         } catch (Exception e) {
-            Log.e(TAG, "Error al inicializar PointAnnotationManager", e);
+            Log.e(TAG, "Error al inicializar AnnotationManagers", e);
         }
+    }
+
+    private void playRouteSound() {
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+        }
+
+        mediaPlayer = MediaPlayer.create(this, R.raw.splash_sound);
+
+        mediaPlayer.setOnCompletionListener(mp -> {
+            mp.release();
+            mediaPlayer = null;
+        });
+
+        mediaPlayer.start();
     }
 
     private void showTargetLocation() {
@@ -118,15 +254,26 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     private void addAnnotationAtPoint(double latitude, double longitude, String title) {
         try {
             if (pointAnnotationManager != null) {
-                Bitmap icon = BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_mylocation);
+                Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
+
+                if (icon == null) {
+                    icon = BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_dialog_map);
+                }
+
+               Bitmap scaledIcon = Bitmap.createScaledBitmap(icon, 48, 48, true);
 
                 PointAnnotationOptions options = new PointAnnotationOptions()
                         .withPoint(Point.fromLngLat(longitude, latitude))
-                        .withIconImage(icon)
+                        .withIconImage(scaledIcon)
                         .withTextField(title)
-                        .withTextColor(Color.WHITE)
-                        .withTextSize(14.0)
-                        .withTextOffset(Arrays.asList(0.0, 2.0));
+                        .withTextColor(Color.WHITE);
+
+                try {
+                    options.withTextSize(14.0);
+                    options.withTextOffset(Arrays.asList(0.0, 2.0));
+                } catch (NoSuchMethodError e) {
+                    Log.d(TAG, "withTextSize no disponible en esta versión");
+                }
 
                 pointAnnotationManager.create(options);
             }
@@ -141,13 +288,11 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             if (locationComponentPlugin != null) {
                 locationComponentPlugin.setEnabled(true);
 
-                Bitmap bearingImage = BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_compass);
-                if (bearingImage != null) {
-                    locationComponentPlugin.setLocationPuck(new LocationPuck2D(
-                            ImageHolder.from(bearingImage),
-                            null,
-                            null
-                    ));
+                try {
+                    LocationPuck2D locationPuck2D = new LocationPuck2D();
+                    locationComponentPlugin.setLocationPuck(locationPuck2D);
+                } catch (NoSuchMethodError e) {
+                    Log.d(TAG, "setLocationPuck no disponible en esta versión");
                 }
 
                 locationComponentPlugin.addOnIndicatorPositionChangedListener(onIndicatorPositionChangedListener);
@@ -186,20 +331,60 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     private void addUserMarker() {
         if (currentUserLocation != null && pointAnnotationManager != null) {
             try {
-                Bitmap icon = BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_compass);
+                Bitmap icon = BitmapFactory.decodeResource(getResources(), R.drawable.ic_user);
+
+                if (icon == null) {
+                    icon = BitmapFactory.decodeResource(getResources(), android.R.drawable.ic_menu_compass);
+                }
+
+                Bitmap scaledIcon = Bitmap.createScaledBitmap(icon, 40, 40, true);
 
                 PointAnnotationOptions options = new PointAnnotationOptions()
                         .withPoint(currentUserLocation)
-                        .withIconImage(icon)
+                        .withIconImage(scaledIcon)
                         .withTextField("Mi ubicación")
-                        .withTextColor(Color.WHITE)
-                        .withTextSize(14.0)
-                        .withTextOffset(Arrays.asList(0.0, 2.0));
+                        .withTextColor(Color.BLUE);
+
+                try {
+                    options.withTextSize(14.0);
+                    options.withTextOffset(Arrays.asList(0.0, 2.0));
+                } catch (NoSuchMethodError e) {
+                    Log.d(TAG, "withTextSize no disponible en esta versión");
+                }
 
                 pointAnnotationManager.create(options);
             } catch (Exception e) {
                 Log.e(TAG, "Error al añadir el marcador del usuario", e);
             }
+        }
+    }
+
+    private void drawRouteLine() {
+        if (currentUserLocation == null) return;
+
+        try {
+            Point destPoint = Point.fromLngLat(targetLongitude, targetLatitude);
+
+            List<Point> points = new ArrayList<>();
+            points.add(currentUserLocation);
+            points.add(destPoint);
+
+            polylineAnnotationManager.deleteAll();
+
+            int primaryColor = ContextCompat.getColor(this, R.color.primary);
+
+            PolylineAnnotationOptions polylineOptions = new PolylineAnnotationOptions()
+                    .withPoints(points)
+                    .withLineColor(primaryColor)
+                    .withLineWidth(5.0);
+
+            polylineAnnotationManager.create(polylineOptions);
+
+            fitCameraToBounds();
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error al mostrar la ruta", e);
+            Toast.makeText(this, "Error al mostrar la ruta", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -218,7 +403,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             points.add(currentUserLocation);
             points.add(Point.fromLngLat(targetLongitude, targetLatitude));
 
-            EdgeInsets edgeInsets = new EdgeInsets(50, 50, 50, 50);
+            EdgeInsets edgeInsets = new EdgeInsets(100, 100, 100, 100);
             binding.mapView.getMapboxMap().cameraForCoordinates(points, edgeInsets, null, null);
         }
     }
@@ -253,6 +438,14 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     }
 
     @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            hideSystemUI();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (locationComponentPlugin != null) {
@@ -260,6 +453,11 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         }
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.removeUpdates(this);
+        }
+
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
         }
     }
 }

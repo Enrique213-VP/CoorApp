@@ -69,12 +69,14 @@ public class MainViewModel extends ViewModel {
                 return;
             }
 
+            Log.d(TAG, "Cargando datos locales para usuario: " + username);
+            loadUserData();
+
             if (NetworkUtils.isNetworkAvailable(context)) {
                 Log.d(TAG, "Intentando cargar datos desde Firebase para usuario: " + username);
                 loadFromFirebase();
             } else {
-                Log.d(TAG, "Sin conexión a internet, cargando datos locales para usuario: " + username);
-                loadUserData();
+                Log.d(TAG, "Sin conexión a internet, usando solamente datos locales para usuario: " + username);
             }
         }
     }
@@ -124,6 +126,9 @@ public class MainViewModel extends ViewModel {
                         .subscribe(
                                 items -> {
                                     Log.d(TAG, "Cargados " + items.size() + " elementos para el usuario: " + username);
+                                    for (BackupItem item : items) {
+                                        Log.d(TAG, "Item local cargado: " + item.getEtiqueta1d());
+                                    }
                                     backupItems.setValue(items);
                                 },
                                 error -> Log.e(TAG, "Error loading backup items for user: " + username, error)
@@ -275,6 +280,7 @@ public class MainViewModel extends ViewModel {
                         .subscribe(
                                 () -> {
                                     Log.d(TAG, "Sincronización completa");
+                                    loadUserData();
                                     syncResult.setValue(Resource.success(true));
                                     isSyncing = false;
                                 },
@@ -283,6 +289,33 @@ public class MainViewModel extends ViewModel {
                                     syncResult.setValue(Resource.error("Error en sincronización: " + error.getMessage(), false));
                                     isSyncing = false;
                                 }
+                        )
+        );
+    }
+
+    public void verifyLocalData() {
+        String username = sessionManager.getUsername();
+        if (username.isEmpty()) {
+            Log.e(TAG, "Error: No hay usuario autenticado para verificar datos");
+            return;
+        }
+
+        disposables.add(
+                backupRepository.getAllBackupItemsForUser(username)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                items -> {
+                                    Log.d(TAG, "Verificación de datos locales: " + items.size() +
+                                            " elementos para el usuario: " + username);
+                                    if (items.isEmpty()) {
+                                        Log.d(TAG, "¡Alerta! No hay datos locales para el usuario: " + username);
+                                    } else {
+                                        Log.d(TAG, "Datos locales encontrados para el usuario: " + username);
+                                        backupItems.setValue(items);
+                                    }
+                                },
+                                error -> Log.e(TAG, "Error verificando datos locales: " + error.getMessage(), error)
                         )
         );
     }
@@ -402,23 +435,21 @@ public class MainViewModel extends ViewModel {
     }
 
     public void processManualInput(String input) {
-        if (isValidInputFormat(input)) {
-            try {
-                String formattedInput = DataParser.formatInput(input);
-                String base64Input = Base64.encodeToString(formattedInput.getBytes(), Base64.DEFAULT);
+        Log.d(TAG, "Procesando entrada manual: " + input);
+        processQrResult.setValue(Resource.loading(null));
 
-                processQrData(base64Input);
-            } catch (IllegalArgumentException e) {
-                processQrResult.setValue(Resource.error("Formato incorrecto: " + e.getMessage(), null));
-            }
-        } else {
-            processQrResult.setValue(Resource.error("Formato de entrada inválido", null));
+        try {
+            String formattedInput = DataParser.formatInput(input);
+            Log.d(TAG, "Entrada formateada: " + formattedInput);
+
+            String base64Input = Base64.encodeToString(formattedInput.getBytes(), Base64.DEFAULT);
+            Log.d(TAG, "Entrada codificada en Base64: " + base64Input);
+
+            processQrData(base64Input);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al procesar entrada manual", e);
+            processQrResult.setValue(Resource.error("Error al procesar entrada: " + e.getMessage(), null));
         }
-    }
-
-    private boolean isValidInputFormat(String input) {
-        String regex = "^.+(-[^-]*){3}$";
-        return input.matches(regex);
     }
 
     private String getCurrentDateAsString() {

@@ -23,6 +23,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Establecer MAPBOX_DOWNLOADS_TOKEN
+        run: echo "MAPBOX_DOWNLOADS_TOKEN=${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}" >> $GITHUB_ENV
+
       - name: Configurar archivo google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
@@ -31,9 +34,13 @@ jobs:
 
       - name: Ejecutar pruebas
         run: ./gradlew test
+        env:
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
 
       - name: Construir APK de debug
         run: ./gradlew assembleDebug
+        env:
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
 
       - name: Subir APK como artefacto
         uses: actions/upload-artifact@v4

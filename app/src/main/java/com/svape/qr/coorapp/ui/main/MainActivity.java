@@ -10,7 +10,10 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.view.inputmethod.EditorInfo;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
@@ -106,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
     }
 
     private void setupClickListeners() {
-        binding.logoutButton.setOnClickListener(v -> viewModel.logout());
+        binding.logoutButton.setOnClickListener(v -> showLogoutConfirmationDialog());
 
         binding.syncButton.setOnClickListener(v -> {
             Log.d(TAG, "Botón de sincronización presionado");
@@ -282,6 +285,40 @@ public class MainActivity extends AppCompatActivity implements BackupAdapter.OnM
 
     private void showLoading(boolean show) {
         binding.progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void showLogoutConfirmationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Información de Cierre de Sesión");
+
+        View customView = getLayoutInflater().inflate(R.layout.dialog_logout_info, null);
+        TextView messageTextView = customView.findViewById(R.id.message_text);
+
+        String message = "Cordial saludo, al momento de cerrar sesión para comprobar la persistencia de datos, permiti que si ingresa con el mismo usuario se toma la informacion de la base de datos local, dado el caso de no tener conexion a internet, la aplicacion hace la limpieza de la base de datos local cuando la persona inicia sesion con un nuevo usuario permitiendo: " +
+                "\n\n• Limpia la base de datos local asociada al usuario anterior" +
+                "\n• Carga únicamente los datos del nuevo usuario desde Firestore" +
+                "\n• Mantiene los datos sincronizados para permitir el modo offline" +
+                "\n• Eliminar la data asociada al dispositivo actual (basado en algún identificador único del dispositivo o un identificador de sesión si lo implementas) de una colección de Firebase Firestore llamada backup, en este caso utilice el ID de usuario de Firestore como identificador único" +
+                "\n\nEsto garantiza la persistencia de datos correcta para cada usuario, " +
+                "manteniendo la información relevante incluso sin conexión a internet.";
+
+        messageTextView.setText(message);
+        builder.setView(customView);
+
+        builder.setPositiveButton("Cerrar Sesión", (dialog, which) -> {
+            viewModel.logout(false);
+        });
+
+        builder.setNeutralButton("Cerrar y Eliminar Backup", (dialog, which) -> {
+            viewModel.logout(true);
+        });
+
+        builder.setNegativeButton("Cancelar", (dialog, which) -> {
+            dialog.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     @Override

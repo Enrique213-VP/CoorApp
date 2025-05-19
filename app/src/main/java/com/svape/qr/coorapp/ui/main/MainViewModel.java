@@ -63,7 +63,19 @@ public class MainViewModel extends ViewModel {
 
             clearPreviousUserData();
         } else {
-            loadUserData();
+            String username = sessionManager.getUsername();
+            if (username.isEmpty()) {
+                Log.e(TAG, "Error: No hay usuario autenticado");
+                return;
+            }
+
+            if (NetworkUtils.isNetworkAvailable(context)) {
+                Log.d(TAG, "Intentando cargar datos desde Firebase para usuario: " + username);
+                loadFromFirebase();
+            } else {
+                Log.d(TAG, "Sin conexión a internet, cargando datos locales para usuario: " + username);
+                loadUserData();
+            }
         }
     }
 
@@ -293,7 +305,7 @@ public class MainViewModel extends ViewModel {
                         .flatMap(item -> {
                             return backupRepository.getBackupCount()
                                     .map(count -> {
-                                        boolean shouldSync = true;
+                                        boolean shouldSync = count % 5 == 0 && count > 0;
                                         Log.d(TAG, "Contador de elementos: " + count + ", Sincronizar: " + shouldSync);
                                         return new Object[]{item, shouldSync};
                                     });
@@ -347,19 +359,46 @@ public class MainViewModel extends ViewModel {
                     }
 
                     String currentDate = getCurrentDateAsString();
-                    return backupRepository.syncWithFirebase(items, username, currentDate)
+                    String deviceId = deviceInfoHelper.getDeviceId();
+                    return backupRepository.syncWithFirebase(items, username, currentDate, deviceId)
                             .timeout(15, TimeUnit.SECONDS)
                             .doOnComplete(() -> Log.d(TAG, "Sincronización completada exitosamente para usuario: " + username))
                             .doOnError(e -> Log.e(TAG, "Error en sincronización", e));
                 });
     }
 
-    public void logout() {
+    public void logout(boolean deleteBackup) {
         logoutResult.setValue(Resource.loading(null));
+        String username = sessionManager.getUsername();
 
-        sessionManager.clearLoginStatus();
+        if (deleteBackup && !username.isEmpty() && NetworkUtils.isNetworkAvailable(context)) {
+            Log.d(TAG, "Eliminando backup del usuario: " + username);
+            disposables.add(
+                    backupRepository.deleteBackup(username)
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(
+                                    () -> {
+                                        Log.d(TAG, "Backup eliminado exitosamente");
+                                        sessionManager.clearLoginStatus();
+                                        logoutResult.setValue(Resource.success(true));
+                                    },
+                                    error -> {
+                                        Log.e(TAG, "Error al eliminar backup", error);
+                                        sessionManager.clearLoginStatus();
+                                        logoutResult.setValue(Resource.success(true));
+                                    }
+                            )
+            );
+        } else {
+            Log.d(TAG, "Cerrando sesión sin eliminar backup");
+            sessionManager.clearLoginStatus();
+            logoutResult.setValue(Resource.success(true));
+        }
+    }
 
-        logoutResult.setValue(Resource.success(true));
+    public void logout() {
+        logout(false);
     }
 
     public void processManualInput(String input) {

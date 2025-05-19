@@ -84,7 +84,7 @@ public class BackupRepository {
         return database.backupDao().getCount();
     }
 
-    public Completable syncWithFirebase(List<BackupItem> items, String username, String date) {
+    public Completable syncWithFirebase(List<BackupItem> items, String username, String date, String deviceId) {
         return Completable.create(emitter -> {
             if (items.isEmpty()) {
                 Log.d(TAG, "No hay elementos para sincronizar con Firebase");
@@ -92,7 +92,7 @@ public class BackupRepository {
                 return;
             }
 
-            firestore.collection("userBackups")
+            firestore.collection("backup")
                     .document(username)
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
@@ -148,12 +148,13 @@ public class BackupRepository {
                         data.put("items", allItems);
                         data.put("username", username);
                         data.put("date", date);
+                        data.put("deviceId", deviceId);
                         data.put("timestamp", System.currentTimeMillis());
 
                         Log.d(TAG, "Sincronizando total de " + allItems.size() +
                                 " elementos a Firebase para usuario: " + username);
 
-                        firestore.collection("userBackups")
+                        firestore.collection("backup")
                                 .document(username)
                                 .set(data, SetOptions.merge())
                                 .addOnSuccessListener(aVoid -> {
@@ -176,7 +177,7 @@ public class BackupRepository {
         return Single.create(emitter -> {
             Log.d(TAG, "Intentando recuperar datos desde Firebase para usuario: " + username);
 
-            firestore.collection("userBackups")
+            firestore.collection("backup")
                     .document(username)
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
@@ -238,15 +239,21 @@ public class BackupRepository {
         });
     }
 
-/*    public Completable deleteBackup(String username) {
+    public Completable deleteBackup(String username) {
         return Completable.create(emitter -> {
-            firestore.collection("userBackups")
+            firestore.collection("backup")
                     .document(username)
                     .delete()
-                    .addOnSuccessListener(aVoid -> emitter.onComplete())
-                    .addOnFailureListener(emitter::onError);
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Backup de Firebase eliminado para el usuario: " + username);
+                        emitter.onComplete();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al eliminar backup de Firebase", e);
+                        emitter.onError(e);
+                    });
         });
-    }*/
+    }
 
 
     public Completable deleteAllExceptUser(String username) {

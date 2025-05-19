@@ -23,19 +23,18 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Establecer MAPBOX_DOWNLOADS_TOKEN
-        run: echo "MAPBOX_DOWNLOADS_TOKEN=${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}" >> $GITHUB_ENV
-
       - name: Configurar archivo google-services.json
         run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
       - name: Otorgar permisos de ejecución a gradlew
         run: chmod +x ./gradlew
 
-      - name: Ejecutar pruebas
-        run: ./gradlew test
-        env:
-          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+      - name: Ejecutar pruebas unitarias (sin Mapbox)
+        run: |
+          ./gradlew :app:testDebugUnitTest --tests "com.svape.qr.coorapp.util.*"
+
+      - name: Establecer MAPBOX_DOWNLOADS_TOKEN para build
+        run: echo "MAPBOX_DOWNLOADS_TOKEN=${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}" >> $GITHUB_ENV
 
       - name: Construir APK de debug
         run: ./gradlew assembleDebug

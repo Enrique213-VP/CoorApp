@@ -67,6 +67,6 @@
     <string name="connect_linkedin">Sergio V.</string>
 
     <!-- Token -->
-    <string name="mapbox_access_token">pk.eyJ1Ijoic3ZhcGUyMTMiLCJhIjoiY204YzhsMmR0MW40cDJxcTFveXAyYmppMyJ9.erDPDm9SwAigpSj6FURroA</string>
+    <string name="mapbox_access_token">sk.eyJ1Ijoic3ZhcGUyMTMiLCJhIjoiY21hdjJtMGpzMDAzbzJscHVycHFubjFmcyJ9.sv2N3fQpeGDnMoYXNc4LLw</string>
 
 </resources>

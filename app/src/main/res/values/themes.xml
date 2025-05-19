@@ -1,9 +1,53 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.CoorApp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <style name="Theme.CoorApp.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="28">shortEdges</item>
+
+
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+
+        <item name="toolbarStyle">@style/Widget.CoorApp.Toolbar</item>
+        <item name="snackbarStyle">@style/Widget.CoorApp.Snackbar</item>
     </style>
 
-    <style name="Theme.CoorApp" parent="Base.Theme.CoorApp" />
+    <style name="Widget.CoorApp.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:elevation">4dp</item>
+        <item name="contentInsetStart">16dp</item>
+        <item name="contentInsetEnd">16dp</item>
+        <item name="titleTextAppearance">@style/TextAppearance.CoorApp.Toolbar.Title</item>
+    </style>
+
+    <style name="TextAppearance.CoorApp.Toolbar.Title" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Widget.CoorApp.Snackbar" parent="Widget.MaterialComponents.Snackbar">
+        <item name="android:layout_margin">8dp</item>
+        <item name="actionTextColorAlpha">1.0</item>
+    </style>
+
+
+    <style name="Theme.CoorApp.Splash" parent="Theme.CoorApp.Light">
+        <item name="android:windowBackground">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
 </resources>

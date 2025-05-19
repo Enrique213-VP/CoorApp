@@ -33,6 +33,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+
     buildFeatures {
         viewBinding = true
     }
@@ -71,9 +77,9 @@ dependencies {
     // QR Scanner
     implementation(libs.code.scanner)
 
-    // Maps y Location
-    implementation(libs.google.maps)
-    implementation(libs.google.location)
+    // Mapbox Maps SDK
+    implementation("com.mapbox.maps:android:11.10.3")
+    implementation("com.mapbox.extension:maps-compose:11.10.2")
 
     // ViewModel y LiveData
     implementation(libs.lifecycle.viewmodel)

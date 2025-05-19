@@ -1,3 +1,72 @@
 <resources>
     <string name="app_name">CoorApp</string>
+
+    <!-- Login -->
+    <string name="login_title">Bienvenido</string>
+    <string name="username_hint">Usuario</string>
+    <string name="password_hint">Contraseña</string>
+    <string name="login_button">Iniciar Sesión</string>
+    <string name="app_logo">Logo de la aplicación</string>
+    <string name="error_username_required">El campo de usuario no puede estar vacío</string>
+    <string name="error_password_required">El campo de contraseña no puede estar vacío</string>
+    <string name="error_invalid_email">Ingrese un correo electrónico válido</string>
+    <string name="error_password_too_short">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_password_consecutive">La contraseña no debe contener dígitos consecutivos</string>
+    <string name="error_login_generic">Error de inicio de sesión. Intente nuevamente.</string>
+    <string name="dont_have_account">¿No tienes una cuenta? Regístrate</string>
+    <string name="warning_title_no_connection">Advertencia de conexión</string>
+    <string name="warning_no_internet_connection">No hay conexión a internet. Tenlo encuenta.</string>
+    <string name="continue_anyway">Continuar</string>
+    <string name="cancel">Cancelar</string>
+
+
+    <!-- Main Screen -->
+    <string name="read_info_title">Leer Información</string>
+    <string name="logout_button">Cerrar Sesión</string>
+    <string name="open_camera">Abrir cámara</string>
+    <string name="close_camera">Cerrar cámara</string>
+    <string name="camera_permission_required">Permiso de cámara requerido para escanear códigos QR</string>
+    <string name="observation_label">Observación:</string>
+    <string name="show_on_map">Mostrar en mapa</string>
+    <string name="sync_button">Sincronizar</string>
+    <string name="sync_started">Sincronizando elementos...</string>
+    <string name="sync_completed">Sincronización completada</string>
+    <string name="sync_error">Error en la sincronización</string>
+    <string name="no_internet_connection">No hay conexión a internet</string>
+    <string name="info_icon">Ícono de información</string>
+    <string name="logout_confirmation_title">Información de Cierre de Sesión</string>
+    <string name="manual_input_hint">Formato: etiqueta-latitud-longitud-observación</string>
+    <string name="send">Enviar</string>
+
+    <!-- Map Screen -->
+    <string name="back_button">Regresar</string>
+    <string name="location_not_available">Ubicación no disponible</string>
+    <string name="location_permission_required">Permiso de ubicación requerido para mostrar dirección</string>
+
+
+    <!-- Splash Screen -->
+    <string name="app_version">Desarrollador Sergio Vargas</string>
+
+
+
+    <!-- Register Screen -->
+    <string name="button_back">Regresar</string>
+    <string name="error_confirm_password_required">Confirme su contraseña</string>
+    <string name="error_confirm_password">Las contraseñas no coinciden</string>
+    <string name="error_username_exists">Este correo ya está registrado</string>
+    <string name="error_registration">Error al registrar. Intente nuevamente.</string>
+    <string name="registration_success">Registro exitoso</string>
+    <string name="register_title">Crear cuenta</string>
+    <string name="register_button">Registrarme</string>
+    <string name="confirm_password_hint">Confirmar contraseña</string>
+    <string name="already_have_account">¿Ya tienes una cuenta? Inicia sesión</string>
+
+
+    <!-- Personal -->
+    <string name="thanks_message">Gracias por la oportunidad</string>
+    <string name="connect_linkedin">Sergio V.</string>
+
+    <!-- Token -->
+    <string name="mapbox_access_token">tk</string>
+
 </resources>

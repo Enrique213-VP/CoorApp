@@ -1,5 +1,6 @@
 package com.svape.qr.coorapp.ui.login;
 
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
@@ -14,6 +15,7 @@ import com.svape.qr.coorapp.databinding.ActivityLoginBinding;
 import com.svape.qr.coorapp.di.ViewModelFactory;
 import com.svape.qr.coorapp.ui.main.MainActivity;
 import com.svape.qr.coorapp.ui.register.RegisterActivity;
+import com.svape.qr.coorapp.util.NetworkUtils;
 import com.svape.qr.coorapp.util.Resource;
 import javax.inject.Inject;
 
@@ -41,13 +43,34 @@ public class LoginActivity extends AppCompatActivity {
         setupLinkedInButton();
     }
 
+    private void showNoConnectionWarning(String username, String password) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.warning_title_no_connection)
+                .setMessage(R.string.warning_no_internet_connection)
+                .setIcon(R.drawable.ic_info)
+                .setCancelable(false)
+                .setPositiveButton(R.string.continue_anyway, (dialog, which) -> {
+                    viewModel.login(username, password);
+                })
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {
+                    dialog.dismiss();
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
     private void setupLoginButton() {
         binding.loginButton.setOnClickListener(v -> {
             String username = binding.usernameEditText.getText().toString().trim();
             String password = binding.passwordEditText.getText().toString().trim();
 
             if (validateInputs(username, password)) {
-                viewModel.login(username, password);
+                if (!NetworkUtils.isNetworkAvailable(this)) {
+                    showNoConnectionWarning(username, password);
+                } else {
+                    viewModel.login(username, password);
+                }
             }
         });
     }

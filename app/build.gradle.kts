@@ -12,8 +12,8 @@ android {
         applicationId = "com.svape.qr.coorapp"
         minSdk = 25
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 12
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

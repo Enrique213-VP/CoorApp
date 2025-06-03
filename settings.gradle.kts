@@ -26,7 +26,7 @@ dependencyResolutionManagement {
             }
             credentials {
                 username = "mapbox"
-                password = providers.gradleProperty("MAPBOX_DOWNLOADS_TOKEN").orElse("").toString()
+                password = providers.gradleProperty("MAPBOX_DOWNLOADS_TOKEN").orElse("").get()
             }
         }
     }

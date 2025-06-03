@@ -63,10 +63,10 @@
 
 
     <!-- Personal -->
-    <string name="thanks_message">Gracias por la oportunidad</string>
+    <string name="thanks_message">Desarrollador Sergio V</string>
     <string name="connect_linkedin">Sergio V.</string>
 
     <!-- Token -->
-    <string name="mapbox_access_token">tk</string>
+    <string name="mapbox_access_token">sk.eyJ1Ijoic3ZhcGUyMTMiLCJhIjoiY21hdjJtMGpzMDAzbzJscHVycHFubjFmcyJ9.sv2N3fQpeGDnMoYXNc4LLw</string>
 
 </resources>
